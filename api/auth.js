@@ -14,7 +14,6 @@ export const config = {
   },
 };
 
-// Middleware sifatida CORS ishlatish
 export default cors()(async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -22,7 +21,7 @@ export default cors()(async (req, res) => {
 
   const { action, username, password } = req.body;
 
-  console.log('Request received:', { action, username }); // So‘rovni log’ga yozish
+  console.log('Request received:', { action, username });
 
   try {
     if (action === 'register') {
@@ -60,7 +59,7 @@ export default cors()(async (req, res) => {
 
     return res.status(400).json({ error: 'Invalid action' });
   } catch (error) {
-    console.error('Auth error:', error.message); // Xatolikni log’ga yozish
+    console.error('Auth error:', error.message);
     return res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
