@@ -1,5 +1,5 @@
 let userId = null;
-const pusher = new Pusher('YOUR_PUSHER_KEY', { cluster: 'YOUR_PUSHER_CLUSTER' });
+let pusher;
 
 function register() {
   const username = document.getElementById('username').value;
@@ -27,11 +27,17 @@ function login() {
         document.getElementById('chat').style.display = 'block';
         loadMessages();
 
-        // Pusher kanaliga obuna bo‘lish
+        // Pusher’ni sozlash
+        pusher = new Pusher('b55bb4e7ad730b3ac2c2', {
+          cluster: 'ap2',
+        });
+
+        // Kanalga obuna bo‘lish
         const channel = pusher.subscribe(`chat-${userId}`);
         channel.bind('message', (data) => {
           const chatWindow = document.getElementById('chat-window');
           chatWindow.innerHTML += `<p>${data.sender_id}: ${data.content}</p>`;
+          chatWindow.scrollTop = chatWindow.scrollHeight; // Chat oynasini pastga aylantirish
         });
       }
     });
@@ -43,6 +49,7 @@ function loadMessages() {
     .then(messages => {
       const chatWindow = document.getElementById('chat-window');
       chatWindow.innerHTML = messages.map(msg => `<p>${msg.sender_id}: ${msg.content}</p>`).join('');
+      chatWindow.scrollTop = chatWindow.scrollHeight;
     });
 }
 
