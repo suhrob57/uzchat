@@ -8,7 +8,21 @@ function register() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'register', username, password }),
-  }).then(() => login());
+  })
+    .then(res => res.json())
+    .then(data => {
+      console.log('Register response:', data);
+      if (data.user_id) {
+        userId = data.user_id;
+        document.getElementById('login').style.display = 'none';
+        document.getElementById('chat').style.display = 'block';
+        loadMessages();
+        setupPusher();
+      } else {
+        alert(data.error || 'Registration failed');
+      }
+    })
+    .catch(error => console.error('Register error:', error));
 }
 
 function login() {
@@ -21,26 +35,18 @@ function login() {
   })
     .then(res => res.json())
     .then(data => {
+      console.log('Login response:', data);
       if (data.user_id) {
         userId = data.user_id;
         document.getElementById('login').style.display = 'none';
         document.getElementById('chat').style.display = 'block';
         loadMessages();
-
-        // Pusher’ni sozlash
-        pusher = new Pusher('b55bb4e7ad730b3ac2c2', {
-          cluster: 'ap2',
-        });
-
-        // Kanalga obuna bo‘lish
-        const channel = pusher.subscribe(`chat-${userId}`);
-        channel.bind('message', (data) => {
-          const chatWindow = document.getElementById('chat-window');
-          chatWindow.innerHTML += `<p>${data.sender_id}: ${data.content}</p>`;
-          chatWindow.scrollTop = chatWindow.scrollHeight; // Chat oynasini pastga aylantirish
-        });
+        setupPusher();
+      } else {
+        alert(data.error || 'Login failed');
       }
-    });
+    })
+    .catch(error => console.error('Login error:', error));
 }
 
 function loadMessages() {
@@ -50,7 +56,8 @@ function loadMessages() {
       const chatWindow = document.getElementById('chat-window');
       chatWindow.innerHTML = messages.map(msg => `<p>${msg.sender_id}: ${msg.content}</p>`).join('');
       chatWindow.scrollTop = chatWindow.scrollHeight;
-    });
+    })
+    .catch(error => console.error('Load messages error:', error));
 }
 
 function sendMessage() {
@@ -61,10 +68,12 @@ function sendMessage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sender_id: userId, receiver_id: receiverId, content }),
-    }).then(() => {
-      document.getElementById('message-input').value = '';
-      loadMessages();
-    });
+    })
+      .then(() => {
+        document.getElementById('message-input').value = '';
+        loadMessages();
+      })
+      .catch(error => console.error('Send message error:', error));
   }
 }
 
@@ -73,4 +82,16 @@ function createGroup() {
   if (groupName && userId) {
     alert(`Guruh "${groupName}" yaratildi!`);
   }
+}
+
+function setupPusher() {
+  pusher = new Pusher('b55bb4e7ad730b3ac2c2', {
+    cluster: 'ap2',
+  });
+  const channel = pusher.subscribe(`chat-${userId}`);
+  channel.bind('message', (data) => {
+    const chatWindow = document.getElementById('chat-window');
+    chatWindow.innerHTML += `<p>${data.sender_id}: ${data.content}</p>`;
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+  });
 }
