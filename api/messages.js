@@ -1,8 +1,17 @@
 import { Pool } from 'pg';
+import Pusher from 'pusher';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
+});
+
+const pusher = new Pusher({
+  appId: process.env.PUSHER_APP_ID,
+  key: process.env.PUSHER_KEY,
+  secret: process.env.PUSHER_SECRET,
+  cluster: process.env.PUSHER_CLUSTER,
+  useTLS: true,
 });
 
 export default async function handler(req, res) {
@@ -12,6 +21,14 @@ export default async function handler(req, res) {
       'INSERT INTO messages (sender_id, receiver_id, content) VALUES ($1, $2, $3)',
       [sender_id, receiver_id, content]
     );
+
+    // Pusher orqali real vaqt xabarini yuborish
+    await pusher.trigger(`chat-${receiver_id}`, 'message', {
+      sender_id,
+      content,
+      sent_at: new Date(),
+    });
+
     res.status(201).json({ message: 'Message sent' });
   } else if (req.method === 'GET') {
     const { user_id } = req.query;
