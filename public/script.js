@@ -1,5 +1,5 @@
 let userId = null;
-let socket = io();
+const pusher = new Pusher('YOUR_PUSHER_KEY', { cluster: 'YOUR_PUSHER_CLUSTER' });
 
 function register() {
   const username = document.getElementById('username').value;
@@ -25,8 +25,14 @@ function login() {
         userId = data.user_id;
         document.getElementById('login').style.display = 'none';
         document.getElementById('chat').style.display = 'block';
-        socket.emit('join', userId);
         loadMessages();
+
+        // Pusher kanaliga obuna bo‘lish
+        const channel = pusher.subscribe(`chat-${userId}`);
+        channel.bind('message', (data) => {
+          const chatWindow = document.getElementById('chat-window');
+          chatWindow.innerHTML += `<p>${data.sender_id}: ${data.content}</p>`;
+        });
       }
     });
 }
@@ -43,14 +49,13 @@ function loadMessages() {
 function sendMessage() {
   const content = document.getElementById('message-input').value;
   if (content && userId) {
-    const receiverId = prompt('Receiver ID:'); // Oddiy uchun hardcoded, keyinroq tanlash tizimi qo‘shiladi
+    const receiverId = prompt('Receiver ID:');
     fetch('/api/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sender_id: userId, receiver_id: receiverId, content }),
     }).then(() => {
       document.getElementById('message-input').value = '';
-      socket.emit('sendMessage', { senderId: userId, receiverId, content });
       loadMessages();
     });
   }
@@ -59,15 +64,6 @@ function sendMessage() {
 function createGroup() {
   const groupName = prompt('Guruh nomi:');
   if (groupName && userId) {
-    // Backend’da guruh yaratish API qo‘shilishi kerak (bu yerda oddiy qilib qoldik)
     alert(`Guruh "${groupName}" yaratildi!`);
   }
 }
-
-// Real vaqtda xabarlar olish
-socket.on('receiveMessage', (data) => {
-  if (data.receiverId === userId) {
-    const chatWindow = document.getElementById('chat-window');
-    chatWindow.innerHTML += `<p>${data.senderId}: ${data.content}</p>`;
-  }
-});
