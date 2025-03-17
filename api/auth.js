@@ -1,18 +1,28 @@
 import { Pool } from 'pg';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
+import cors from 'cors';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
 });
 
-export default async function handler(req, res) {
+export const config = {
+  api: {
+    bodyParser: true,
+  },
+};
+
+// Middleware sifatida CORS ishlatish
+export default cors()(async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const { action, username, password } = req.body;
+
+  console.log('Request received:', { action, username }); // So‘rovni log’ga yozish
 
   try {
     if (action === 'register') {
@@ -34,10 +44,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Username and password are required' });
       }
 
-      const result = await pool.query(
-        'SELECT * FROM users WHERE username = $1',
-        [username]
-      );
+      const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
       if (result.rows.length === 0) {
         return res.status(401).json({ error: 'User not found' });
       }
@@ -53,7 +60,7 @@ export default async function handler(req, res) {
 
     return res.status(400).json({ error: 'Invalid action' });
   } catch (error) {
-    console.error('Auth error:', error);
+    console.error('Auth error:', error.message); // Xatolikni log’ga yozish
     return res.status(500).json({ error: 'Internal server error', details: error.message });
   }
-}
+});
