@@ -9,6 +9,7 @@
     "cors": "^2.8.5"
   },
   "scripts": {
-    "start": "vercel dev"
+    "start": "vercel dev",
+    "postinstall": "npm install"
   }
 }
