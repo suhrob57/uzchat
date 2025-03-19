@@ -1,41 +1,50 @@
+import express from 'express';
+import http from 'http';
 import { Server } from 'socket.io';
+import dotenv from 'dotenv';
+import cors from 'cors';
+import Pusher from 'pusher';
 
-export const config = {
-  runtime: 'edge',
-};
+// Env o'qish
+dotenv.config();
 
-const io = new Server();
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: '*'
+  }
+});
 
+// CORS
+app.use(cors());
+app.use(express.json());
+
+// Pusher sozlamalari
+const pusher = new Pusher({
+  appId: process.env.PUSHER_APP_ID,
+  key: process.env.PUSHER_KEY,
+  secret: process.env.PUSHER_SECRET,
+  cluster: process.env.PUSHER_CLUSTER,
+  useTLS: true
+});
+
+// Socket.io ulanishi
 io.on('connection', (socket) => {
-  console.log('New user connected:', socket.id);
+  console.log('Foydalanuvchi ulandi:', socket.id);
 
-  socket.on('join', (userId) => {
-    socket.join(userId);
-  });
-
-  socket.on('sendMessage', ({ senderId, receiverId, content }) => {
-    io.to(receiverId).emit('receiveMessage', { senderId, content, sent_at: new Date() });
-  });
-
-  socket.on('joinGroup', ({ userId, groupId }) => {
-    socket.join(`group_${groupId}`);
-  });
-
-  socket.on('sendGroupMessage', ({ groupId, senderId, content }) => {
-    io.to(`group_${groupId}`).emit('receiveGroupMessage', { senderId, content, sent_at: new Date() });
+  socket.on('sendMessage', (data) => {
+    io.emit('receiveMessage', data);
+    pusher.trigger('chat', 'message', data);
   });
 
   socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
+    console.log('Foydalanuvchi chiqib ketdi:', socket.id);
   });
 });
 
-export default (req, res) => {
-  if (res.socket.server.io) {
-    console.log('Socket.io already running');
-  } else {
-    console.log('Socket.io starting');
-    res.socket.server.io = io;
-  }
-  res.end();
-};
+// Serverni ishga tushirish
+const PORT = process.env.PORT || 3001;
+server.listen(PORT, () => {
+  console.log(`Server ${PORT} portida ishlamoqda...`);
+});
